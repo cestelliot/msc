@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Common Ground Experiment</title>
+    <script src='jspsych/jspsych.js'></script>
+    <script src='jspsych/plugins/jspsych-html-keyboard-response.js'></script>
+    <script src="jspsych/plugins/jspsych-survey-multi-choice.js"></script>
+    <script src='jspsych/plugins/jspsych-survey-text.js'></script>
+    <script src='jspsych/plugins/jspsych-cue-target.js'></script>
+    <script src="jspsych/plugins/jspsych-external-html.js"></script>
+    <script src='jspsych/plugins/jspsych-survey-likert.js'></script>
+    <script src="jspsych/plugins/jspsych-instructions.js"></script>
+    <script src='libraries/jquery-3.4.1.min.js'></script>
+    <link href='jspsych/css/jspsych.css' rel='stylesheet' type='text/css'></link>
+  </head>
+  <body></body>
+  <script>
+
+  var timeline = [];
+    var loop;
+    var speaker_target;
+    var speaker_clue;
+    var speaker_rating;
+    var listener_guess;
+
+    /*welcome message trial*/
+    var consent = {
+      type: 'external-html',
+      url: '../views/consent.html',
+      check_fn: function(){
+        startTime = Date.now();
+        return true;
+      },
+      cont_btn: 'consent'
+    }
+
+    /* define instructions trial */
+    var instructions = {
+      type: 'instructions',
+      pages: ["<p><font size = '5'>You will play a communication game set in pairs in which you will have to guess different words.</p>"+
+      "<p>Sometimes you will be the <strong> signaller </strong> and sometimes you will be the <strong>receiver</strong>.</font></p>",
+      "<p>When you are the <strong> speaker</strong>, you will:</p>"+
+      '<p>1. Type a one-word cue to <b>help the receiver </b> guess a word.</p>'+
+      "<p>2. Rate how close the receiver's guess is to the original word <strong>(0 being not close at all and 10 being the target word).</strong></p>"+
+      "<p>3. After giving a clue and rating the response, you will swap roles,</p>"+
+      "<p>and continue with a different word.</p>",
+      '<p>When you are the <strong> receiver</strong>, you will:</p>'+
+      "<p>1.Type the target word you think the signaller is trying to convey.</p>"+
+      "<p>2. Wait for the signaller's rating to see how close your guess is to the target .</p>"+
+      "<p>3. After guessing a word and receiving feedback you will swap roles, </p>"+
+      "<p>and continue with a different word. </p>",
+      "<font size = '5'>Press <strong > next </strong> to do a quick questionnaire to be sure you understood the instructions.</font>"],
+      show_clickable_nav: true
+    };
+
+    //questionnaire
+    var options = ["Correct", "Incorrect"];
+    var questions = {
+      type: 'survey-multi-choice',
+      questions: [{prompt: "I am going to swap roles between signaller and receiver", options: options, required: true} ,
+                  {prompt: "I can provide two-word clues to the receiver.", options: options, required: true} ,
+                  {prompt:  "If I am the signaller, I can see what the receiver guessed", options: options, required: true},
+                  {prompt: "I will rate the receiver's response from 0 to 5", options: options, required: true},
+                  {prompt: "I can see the signaller's rating of my guess",options: options, required: true},
+                  {prompt: "If the guess was not correct, we will continue with the same word",options: options, required: true}],
+      preamble: '<strong>Try to answer all questions correctly</strong>',
+                  on_finish: function(data){
+                    data.correct_responses =  "{\"Q0\":\"Correct\",\"Q1\":\"Incorrect\",\"Q2\":\"Correct\",\"Q3\":\"Incorrect\",\"Q4\":\"Correct\",\"Q5\":\"Incorrect\"}",
+                    data.correct = data.responses == data.correct_responses
+                    loop = false
+                  },
+    };
+
+    var question_wrong = {
+      type: 'html-keyboard-response',
+      stimulus: '<font size="5">Unfortunately, you got some questions wrong. Press any key to reread the instructions and try again.</font>',
+      on_finish: function(){
+        loop = true
+      }
+    };
+
+    var if_wrong = {
+      timeline: [question_wrong],
+      conditional_function: function(){
+        var data = jsPsych.data.get().last(1).values()[0];
+        if (data.correct == false){
+          return true;
+        } else {
+          return false;
+        }
+      }
+    };
+
+    var questionnaire = {
+      timeline: [questions, if_wrong]
+    };
+
+    var question_loop = {
+      timeline: [instructions, questionnaire],
+      loop_function: function(){
+        if (loop == false){
+          return false;
+        } else {
+          return true;
+        }
+      }
+    };
+
+    //trial
+    var trial_intro_speaker = {
+      type: 'html-keyboard-response',
+      stimulus: '<font size= "5">You got all the questions right! Now, we will do a trial run.'+
+      '<p>For the first round, you will be the <strong>speaker</strong>.</font></p>'
+    };
+
+    //Justin stuff
+    var cues = [
+      {qNo: 0, target: 'Bank'},
+    //  {qNo: 1, target: 'Butter'},
+    //  {qNo: 2, target: 'Seek'}
+    ]
+    var cueshuffle = jsPsych.randomization.repeat(cues, 1)
+    var cue_target = {
+      type: 'cue-target',
+      timeline: cueshuffle,
+      post_trial_gap: 600,
+      on_finish: function(data){
+        speaker_target = data.target
+        speaker_clue = data.response
+      }
+    };
+    var waitplease = {
+      type: 'html-keyboard-response',
+      stimulus: '<font size = "5">Your partner is making their guess. Please wait.</font>'
+    };
+    var how_good = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    var rater = {
+      type: 'survey-likert',
+      questions: function(){
+        return[{prompt: "<font size='5'>The target was "+speaker_target+" </font><font size= '5'> and your partner said money. How close is this?</font>",
+      labels: how_good, required: true}]
+    },
+      on_finish: function(data){
+        speaker_rating = data.responses
+      }
+    };
+    var speaker = {
+      timeline: [trial_intro_speaker, cue_target, waitplease, rater],
+    };
+    //trial intro receiver
+    var trial_intro_listener = {
+      type: 'html-keyboard-response',
+      stimulus: '<font size = "5">Now we are swapping roles. For this round, you will be the <strong>listener</strong>.</font>'
+    };
+    var waitplease2 = {
+      type: 'html-keyboard-response',
+      stimulus: '<font size = "5">Your partner is thinking of a word. Please wait.</font>'
+    };
+    var target_cue = {
+      type: 'cue-target',
+      preamble: '<font size = "5">Your partner sent you this clue. What do you think the original target was?</font>',
+      target: '<font size ="7"> Drink</font>',
+      qNo: 0,
+      post_trial_gap: 600,
+      on_finish: function(data){
+        listener_guess = data.response
+      }
+    };
+    var waitplease3 = {
+      type: 'html-keyboard-response',
+      stimulus: '<font size = "5">Your partner is rating your response. Please wait.</font>',
+    };
+    var rated = {
+      type: 'html-keyboard-response',
+      stimulus: function(){
+        return "<font size = '5'>You answered " +listener_guess+ " and the signaller rated your answer <b>8</b></font>"
+      }
+    };
+    var listener = {
+      timeline: [trial_intro_listener, waitplease2, target_cue, waitplease3, rated]
+    };
+    var practice = {
+      timeline: [speaker, listener]
+    }
+    /*start Experiment*/
+    jsPsych.init({
+        default_iti: 500,
+        timeline: [
+          // welcome,
+          // question_loop,
+          practice,
+        ],
+        // exclusions: {
+        //   min_width: 800,
+        //   min_height: 600
+        // },
+        // show_progress_bar: true,
+        // auto_update_progress_bar: false,
+        on_finish: function(){
+          jsPsych.data.displayData();
+        }
+    });
+  </script>
+</html>
