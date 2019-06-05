@@ -1,9 +1,11 @@
 /*jshint esversion: 6 */
 
 /*
-To do:
-add database
-add redis
+This app's name: radiant-thicket-74554
+
+TODO:
+JS - add database
+JS - add redis
 */
 
 // --- NPM PACKAGES

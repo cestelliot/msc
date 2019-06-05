@@ -4,9 +4,19 @@ const uuid = require('uuid'),
       {io} = require('../app');
 
 /*
+based on: https://github.com/jspsych/jsPsych-socket-server/blob/master/server/index.js
+
 Terminology:
-socket is the client, representing a particular participant
-session is the room (simultaneous experiment instances), where pairs of participants can interact
+Socket is the client, representing a particular participant
+Session is the room (simultaneous experiment instances), where pairs of participants can interact
+
+In the code below, comments between between /star star/ are usually mine, and comments with just // are usually
+whoever wrote the above script that I copied this from
+
+I've added some things to do with the tag TODO. I don't mean that *you* necessarily have to do them
+I'll give some of them a go myself in the next few days. Even if you did do them, it would be after we
+discussed what events with what data you think the experiment will need. 
+
 */
 var sessions = [];
 const READY_TIMEOUT = 3000;
