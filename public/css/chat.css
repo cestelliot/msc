@@ -1,0 +1,29 @@
+ul {
+  padding-inline-start: 2px;
+}
+
+li {
+  list-style: none;
+}
+
+li.own {
+  background: #B7EFF0;
+}
+li.other {
+  background: white;
+}
+
+#chat-container {
+  width: 500px;
+  margin: auto;
+  margin-top: 200px;
+}
+
+button {
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.hidden {
+  display: none;
+}

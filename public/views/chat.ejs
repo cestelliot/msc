@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+  <link rel="stylesheet" href="css/chat.css">
+  <body>
+    <div id="chat-container">
+      <div id='welcome'>
+        <p>Welcome! <span id="span-id">Awaiting id...</span></p>
+        <div id="room-control" class="hidden">
+          <p>Click here to join a room:</p>
+          <button id="join" type="button">Join</button>
+          <button id="leave" type="button" class="hidden">Leave</button>
+        </div>
+      </div>
+      <div id='room-info'>
+      </div>
+      <div>
+        <div id="message-ready">
+        </div>
+        <input id="message" class="hidden" placeholder="type message here"></input>
+      </div>
+      <div>
+        <button id="submit" class="hidden">Send</button>
+      </div>
+      <div id="messages-container">
+        <ul id="messages">
+        </ul>
+      </div>
+    </div>
+  </body>
+  <script>
+
+
+    var state = 'waiting';
+
+    var socket = io();
+    socket.on('connect', function(){
+      console.log("Connected to socket")
+      $('#room-control').removeClass('hidden');
+      $('#span-id').html('Your ID is: ' + socket.id);
+    });
+
+    // once a room has been assigned
+    socket.on('join-reply', function(msg){
+      $('#room-info').html('<p>You are in room ' + msg.session_id + '</p>');
+      $('#leave').removeClass('hidden');
+      if(state == 'waiting'){
+          $('#message-ready').html("<p>Waiting for someone else to join this room...</p>");
+      }
+    });
+
+    /*
+    TODO: currently when the room is full, everyone is told that they're ready to message.
+    Ultimately, we want to have them confirm that they're still there and ready, so that one person
+    isn't left hanging if their partner got to the waiting room first, but then went off to make a cup of coffee
+    and hasn't seen that their room is now full
+    */
+    socket.on('ready-check', function(msg){
+      // once a room is full: will only be triggered when two people are in a room
+      state = 'ready';
+      $('#message-ready').html('<p>Ready to message!</p>')
+      $('#message').removeClass('hidden');
+      $('#submit').removeClass('hidden');
+    });
+
+    // Handle inputs (buttons, text)
+
+    $('#join').click(function(e){
+      socket.emit('join', socket.id);
+    })
+
+    $('#leave').click(function(e){
+      socket.emit('leave', socket.id);
+    })
+
+    $('#submit').click(function(e){
+      sendMessage();
+    });
+
+    $('#message').keypress(function(e){
+      if(e.keyCode==13){ //13 is the code for the ENTER key
+        sendMessage();
+      }
+    });
+
+    function sendMessage(){
+      var text = $('#message').val();
+      if(text.length>0){
+        /* TODO:
+        1) In the experiment script, we'd need to send more than just the text. E.g. the
+        what number question are we on
+        what was the target word,
+        the person's role (signaler/guesser)
+        relatedly, whether the message is a signaler or a guess...
+        2) For now, I'm just using the 'push' endpoint to handle message sending, but from
+        all the 'wait' and 'sync' bits in session.js, I think it's mean to check that
+        everyone's getting the right data at the right time
+        */
+        var msg = {message: text};
+        socket.emit('push', msg);
+        $('#message').val('');
+      }
+    }
+
+    socket.on('push-reply', function(msg){
+      var source;
+      if(msg.id == socket.id){
+        source = 'own';
+      } else {
+        source = 'other';
+      }
+      $('#messages').append($('<li class="'+source+'">').text(msg.message));
+    });
+
+  </script>
+</html>
